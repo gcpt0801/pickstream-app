@@ -1,6 +1,6 @@
 # Development environment overrides
 global:
-  projectId: "your-gcp-project-id-dev"
+  projectId: "gcp-terraform-demo-474514"
   
 backend:
   replicaCount: 2

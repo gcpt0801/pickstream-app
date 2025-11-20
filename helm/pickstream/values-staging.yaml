@@ -1,6 +1,6 @@
 # Staging environment overrides
 global:
-  projectId: "your-gcp-project-id-staging"
+  projectId: "gcp-terraform-demo-474514"
   
 backend:
   replicaCount: 3

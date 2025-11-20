@@ -3,7 +3,7 @@
 
 # Global settings
 global:
-  projectId: "your-gcp-project-id"
+  projectId: "gcp-terraform-demo-474514"
   region: "us-central1"
   
 # Namespace
@@ -11,7 +11,7 @@ namespace: pickstream
 
 # Image registry
 imageRegistry: us-central1-docker.pkg.dev
-imageRepository: your-gcp-project-id/pickstream
+imageRepository: gcp-terraform-demo-474514/pickstream
 
 # Backend service configuration
 backend:
@@ -152,7 +152,7 @@ ingress:
 serviceAccount:
   create: true
   annotations:
-    iam.gke.io/gcp-service-account: "pickstream-sa@your-gcp-project-id.iam.gserviceaccount.com"
+    iam.gke.io/gcp-service-account: "pickstream-sa@gcp-terraform-demo-474514.iam.gserviceaccount.com"
   name: "pickstream"
 
 # Pod Disruption Budget

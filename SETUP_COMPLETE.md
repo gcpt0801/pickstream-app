@@ -151,9 +151,9 @@ Once your GKE cluster is provisioned (from pickstream-infrastructure repo):
 
 ```bash
 # Get cluster credentials
-gcloud container clusters get-credentials pickstream-dev \
-  --region=us-central1 \
-  --project=YOUR_PROJECT_ID
+gcloud container clusters get-credentials pickstream-cluster \
+  --zone=us-central1-a \
+  --project=gcp-terraform-demo-474514
 
 # Deploy with Helm
 helm upgrade --install pickstream ./helm/pickstream \

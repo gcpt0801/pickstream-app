@@ -13,9 +13,9 @@ NC='\033[0m'
 
 # Configuration
 NAMESPACE="${NAMESPACE:-pickstream}"
-CLUSTER="${GKE_CLUSTER:-pickstream-dev}"
-REGION="${GCP_REGION:-us-central1}"
-PROJECT_ID="${GCP_PROJECT_ID:-your-gcp-project-id}"
+CLUSTER="${GKE_CLUSTER:-pickstream-cluster}"
+ZONE="${GCP_ZONE:-us-central1-a}"
+PROJECT_ID="${GCP_PROJECT_ID:-gcp-terraform-demo-474514}"
 
 echo -e "${GREEN}=== PickStream Port Forward ===${NC}\n"
 
@@ -23,7 +23,7 @@ echo -e "${GREEN}=== PickStream Port Forward ===${NC}\n"
 if ! kubectl cluster-info &> /dev/null; then
     echo -e "${YELLOW}Kubectl not configured. Configuring now...${NC}"
     gcloud container clusters get-credentials ${CLUSTER} \
-        --region=${REGION} \
+        --zone=${ZONE} \
         --project=${PROJECT_ID}
 fi
 

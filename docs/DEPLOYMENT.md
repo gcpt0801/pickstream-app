@@ -67,8 +67,8 @@ docker push us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/pickstream/pickstream-f
 
 ```bash
 # Get cluster credentials
-gcloud container clusters get-credentials pickstream-dev \
-  --region=us-central1 \
+gcloud container clusters get-credentials pickstream-cluster \
+  --zone=us-central1-a \
   --project=${GCP_PROJECT_ID}
 
 # Verify connection

@@ -86,8 +86,8 @@ PickStream is a microservices-based random name selection application deployed o
 
 1. **Configure kubectl**
    ```bash
-   gcloud container clusters get-credentials pickstream-dev \
-     --region=us-central1 \
+   gcloud container clusters get-credentials pickstream-cluster \
+     --zone=us-central1-a \
      --project=your-gcp-project-id
    ```
 

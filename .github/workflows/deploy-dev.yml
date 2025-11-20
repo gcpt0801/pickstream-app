@@ -6,8 +6,8 @@ on:
     branches: [main]
 
 env:
-  GCP_REGION: us-central1
-  GKE_CLUSTER: pickstream-dev
+  GCP_ZONE: us-central1-a
+  GKE_CLUSTER: pickstream-cluster
   NAMESPACE: pickstream
   HELM_RELEASE: pickstream
 
@@ -39,7 +39,7 @@ jobs:
     - name: Get GKE credentials
       run: |
         gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
-          --region=${{ env.GCP_REGION }} \
+          --zone=${{ env.GCP_ZONE }} \
           --project=${{ secrets.GCP_PROJECT_ID }}
       
     - name: Set up Helm
