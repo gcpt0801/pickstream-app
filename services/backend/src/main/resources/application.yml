@@ -5,6 +5,7 @@ server:
 spring:
   application:
     name: pickstream-backend
+    version: 1.0.0
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
