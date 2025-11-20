@@ -50,6 +50,18 @@ PickStream is a microservices-based random name selection application deployed o
 - Helm 3.13+ (for chart deployments)
 - gcloud CLI (for GKE access)
 
+### Automated Setup (Recommended)
+
+The CI/CD pipeline automatically handles:
+- ✅ Building and pushing Docker images
+- ✅ Creating firewall rules for LoadBalancer access
+- ✅ Setting up Kubernetes namespace with proper labels
+- ✅ Cleaning up problematic NetworkPolicies
+- ✅ Deploying with Helm
+- ✅ Running smoke tests
+
+Just push to `main` branch and the deployment happens automatically!
+
 ### Local Development
 
 1. **Clone the repository**
