@@ -77,7 +77,15 @@ jobs:
         
     - name: Create namespace if not exists
       run: |
-        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+        if kubectl get namespace ${{ env.NAMESPACE }} > /dev/null 2>&1; then
+          echo "Namespace exists, adding Helm labels..."
+          kubectl label namespace ${{ env.NAMESPACE }} app.kubernetes.io/managed-by=Helm --overwrite
+          kubectl annotate namespace ${{ env.NAMESPACE }} meta.helm.sh/release-name=${{ env.HELM_RELEASE }} --overwrite
+          kubectl annotate namespace ${{ env.NAMESPACE }} meta.helm.sh/release-namespace=${{ env.NAMESPACE }} --overwrite
+        else
+          echo "Creating namespace..."
+          kubectl create namespace ${{ env.NAMESPACE }}
+        fi
         
     - name: Backup current deployment
       run: |
