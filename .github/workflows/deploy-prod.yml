@@ -1,0 +1,186 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (must be specific version, not latest)'
+        required: true
+      confirmation:
+        description: 'Type "DEPLOY_TO_PRODUCTION" to confirm'
+        required: true
+
+env:
+  GCP_REGION: us-central1
+  GKE_CLUSTER: pickstream-prod
+  NAMESPACE: pickstream
+  HELM_RELEASE: pickstream
+
+jobs:
+  validate:
+    name: Validate Input
+    runs-on: ubuntu-latest
+    steps:
+    - name: Validate confirmation
+      run: |
+        if [ "${{ github.event.inputs.confirmation }}" != "DEPLOY_TO_PRODUCTION" ]; then
+          echo "❌ Confirmation text does not match. Aborting deployment."
+          exit 1
+        fi
+        echo "✓ Confirmation validated"
+        
+    - name: Validate image tag
+      run: |
+        if [ "${{ github.event.inputs.image_tag }}" == "latest" ]; then
+          echo "❌ Cannot deploy 'latest' tag to production. Use a specific version."
+          exit 1
+        fi
+        echo "✓ Image tag validated: ${{ github.event.inputs.image_tag }}"
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate
+    environment:
+      name: production
+      url: https://pickstream.example.com
+    
+    permissions:
+      contents: read
+      id-token: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Get GKE credentials
+      run: |
+        gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ secrets.GCP_PROJECT_ID }}
+      
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.13.0'
+        
+    - name: Create namespace if not exists
+      run: |
+        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+        
+    - name: Backup current deployment
+      run: |
+        echo "Creating backup of current deployment..."
+        helm get values ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} > backup-values.yaml || echo "No existing deployment"
+        kubectl get all -n ${{ env.NAMESPACE }} -o yaml > backup-resources.yaml
+        
+    - name: Deploy with Helm (Blue-Green strategy)
+      run: |
+        helm upgrade --install ${{ env.HELM_RELEASE }} ./helm/pickstream \
+          --namespace ${{ env.NAMESPACE }} \
+          --values ./helm/pickstream/values.yaml \
+          --values ./helm/pickstream/values-prod.yaml \
+          --set global.projectId=${{ secrets.GCP_PROJECT_ID }} \
+          --set backend.image.tag=${{ github.event.inputs.image_tag }} \
+          --set frontend.image.tag=${{ github.event.inputs.image_tag }} \
+          --wait \
+          --timeout 10m
+          
+    - name: Verify deployment
+      run: |
+        echo "Verifying backend deployment..."
+        kubectl rollout status deployment/pickstream-backend -n ${{ env.NAMESPACE }} --timeout=10m
+        
+        echo "Verifying frontend deployment..."
+        kubectl rollout status deployment/pickstream-frontend -n ${{ env.NAMESPACE }} --timeout=10m
+        
+        echo "✓ All deployments successful"
+        
+    - name: Run comprehensive smoke tests
+      run: |
+        echo "Running smoke tests..."
+        sleep 30
+        
+        # Test backend health
+        kubectl port-forward -n ${{ env.NAMESPACE }} svc/pickstream-backend 8080:8080 &
+        PF_PID=$!
+        sleep 10
+        
+        # Health check
+        echo "Testing backend health endpoint..."
+        curl -f http://localhost:8080/api/health || exit 1
+        
+        # Test random name endpoint
+        echo "Testing random name endpoint..."
+        curl -f http://localhost:8080/api/random-name || exit 1
+        
+        # Test list names endpoint
+        echo "Testing list names endpoint..."
+        curl -f http://localhost:8080/api/names || exit 1
+        
+        kill $PF_PID
+        
+        echo "✓ All smoke tests passed"
+        
+    - name: Monitor for 5 minutes
+      run: |
+        echo "Monitoring deployment for 5 minutes..."
+        for i in {1..10}; do
+          echo "Check $i/10..."
+          kubectl get pods -n ${{ env.NAMESPACE }}
+          
+          # Check if any pods are failing
+          FAILING_PODS=$(kubectl get pods -n ${{ env.NAMESPACE }} -o json | jq -r '.items[] | select(.status.phase != "Running" and .status.phase != "Succeeded") | .metadata.name')
+          if [ ! -z "$FAILING_PODS" ]; then
+            echo "⚠️  Warning: Some pods are not in Running state:"
+            echo "$FAILING_PODS"
+          fi
+          
+          sleep 30
+        done
+        echo "✓ Monitoring complete"
+        
+    - name: Get deployment info
+      if: always()
+      run: |
+        echo "=== Deployment Summary ==="
+        echo "Image Tag: ${{ github.event.inputs.image_tag }}"
+        echo "Deployed by: ${{ github.actor }}"
+        echo "Timestamp: $(date)"
+        echo ""
+        echo "=== Helm Release ==="
+        helm list -n ${{ env.NAMESPACE }}
+        echo ""
+        echo "=== Pods ==="
+        kubectl get pods -n ${{ env.NAMESPACE }} -o wide
+        echo ""
+        echo "=== Services ==="
+        kubectl get svc -n ${{ env.NAMESPACE }}
+        echo ""
+        echo "=== Ingress ==="
+        kubectl get ingress -n ${{ env.NAMESPACE }}
+        echo ""
+        echo "=== HPA ==="
+        kubectl get hpa -n ${{ env.NAMESPACE }}
+        
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "❌ Deployment failed! Initiating rollback..."
+        helm rollback ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} --wait
+        echo "Rollback complete. Please investigate the failure."
+        
+    - name: Notify success
+      if: success()
+      run: |
+        echo "✅ Production deployment successful!"
+        echo "Deployed image tag: ${{ github.event.inputs.image_tag }}"

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickStream - Random Selection Made Easy</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 PickStream</h1>
+        <p class="subtitle">Random Selection Made Easy</p>
+        
+        <div id="nameDisplay" class="name-display">
+            Click the button to get a random name!
+        </div>
+        
+        <button id="getNameBtn" class="btn btn-primary" onclick="getRandomName()">
+            Get Random Name
+        </button>
+        
+        <div class="add-name-section">
+            <h2>Add New Name</h2>
+            <div class="input-group">
+                <input type="text" id="nameInput" placeholder="Enter a name..." />
+                <button onclick="addName()" class="btn btn-secondary">Add</button>
+            </div>
+            <div id="message" class="message"></div>
+        </div>
+        
+        <div class="stats-section">
+            <h3>Statistics</h3>
+            <div id="stats" class="stats">
+                <span id="nameCount">Loading...</span> names available
+            </div>
+            <button onclick="loadAllNames()" class="btn btn-link">View All Names</button>
+        </div>
+        
+        <div id="namesList" class="names-list hidden"></div>
+    </div>
+    
+    <footer class="footer">
+        <p>Powered by PickStream on GKE | <span id="backendStatus">Checking backend...</span></p>
+    </footer>
+    
+    <script src="/js/app.js"></script>
+</body>
+</html>

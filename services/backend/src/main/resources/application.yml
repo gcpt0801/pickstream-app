@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: pickstream-backend
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${ENVIRONMENT:dev}
+
+logging:
+  level:
+    root: INFO
+    com.pickstream: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

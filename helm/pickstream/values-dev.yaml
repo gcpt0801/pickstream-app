@@ -1,0 +1,60 @@
+# Development environment overrides
+global:
+  projectId: "your-gcp-project-id-dev"
+  
+backend:
+  replicaCount: 2
+  
+  image:
+    tag: dev
+  
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3
+  
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "development"
+    - name: LOGGING_LEVEL_COM_PICKSTREAM
+      value: "DEBUG"
+
+frontend:
+  replicaCount: 1
+  
+  image:
+    tag: dev
+  
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 2
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  hosts:
+    - host: pickstream-dev.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: pickstream-frontend
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: pickstream-backend
+          port: 8080
+  tls:
+    - secretName: pickstream-dev-tls
+      hosts:
+        - pickstream-dev.example.com
+
+podDisruptionBudget:
+  enabled: false

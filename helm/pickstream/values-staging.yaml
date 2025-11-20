@@ -1,0 +1,40 @@
+# Staging environment overrides
+global:
+  projectId: "your-gcp-project-id-staging"
+  
+backend:
+  replicaCount: 3
+  
+  image:
+    tag: staging
+  
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 5
+  
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "staging"
+
+frontend:
+  replicaCount: 2
+  
+  image:
+    tag: staging
+
+ingress:
+  hosts:
+    - host: pickstream-staging.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: pickstream-frontend
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: pickstream-backend
+          port: 8080
+  tls:
+    - secretName: pickstream-staging-tls
+      hosts:
+        - pickstream-staging.example.com

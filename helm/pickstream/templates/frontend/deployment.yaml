@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontend.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "pickstream.frontend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.frontend.autoscaling.enabled }}
+  replicas: {{ .Values.frontend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pickstream.frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "pickstream.frontend.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "pickstream.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        fsGroup: 101
+      containers:
+      - name: frontend
+        image: {{ include "pickstream.frontend.image" . }}
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.frontend.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range .Values.frontend.env }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+        livenessProbe:
+          {{- toYaml .Values.frontend.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.frontend.readinessProbe | nindent 10 }}
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+          readOnlyRootFilesystem: false
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

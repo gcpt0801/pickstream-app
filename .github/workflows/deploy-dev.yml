@@ -1,0 +1,103 @@
+name: Deploy to Development
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  GCP_REGION: us-central1
+  GKE_CLUSTER: pickstream-dev
+  NAMESPACE: pickstream
+  HELM_RELEASE: pickstream
+
+jobs:
+  deploy:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://pickstream-dev.example.com
+    
+    permissions:
+      contents: read
+      id-token: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Get GKE credentials
+      run: |
+        gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ secrets.GCP_PROJECT_ID }}
+      
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.13.0'
+        
+    - name: Create namespace if not exists
+      run: |
+        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+        
+    - name: Deploy with Helm
+      run: |
+        helm upgrade --install ${{ env.HELM_RELEASE }} ./helm/pickstream \
+          --namespace ${{ env.NAMESPACE }} \
+          --values ./helm/pickstream/values.yaml \
+          --values ./helm/pickstream/values-dev.yaml \
+          --set global.projectId=${{ secrets.GCP_PROJECT_ID }} \
+          --set backend.image.tag=${{ github.sha }} \
+          --set frontend.image.tag=${{ github.sha }} \
+          --wait \
+          --timeout 5m
+          
+    - name: Verify deployment
+      run: |
+        kubectl rollout status deployment/pickstream-backend -n ${{ env.NAMESPACE }} --timeout=5m
+        kubectl rollout status deployment/pickstream-frontend -n ${{ env.NAMESPACE }} --timeout=5m
+        
+    - name: Run smoke tests
+      run: |
+        echo "Waiting for services to be ready..."
+        sleep 30
+        
+        # Port forward and test backend health
+        kubectl port-forward -n ${{ env.NAMESPACE }} svc/pickstream-backend 8080:8080 &
+        PF_PID=$!
+        sleep 5
+        
+        curl -f http://localhost:8080/api/health || exit 1
+        echo "✓ Backend health check passed"
+        
+        kill $PF_PID
+        
+    - name: Get deployment info
+      if: always()
+      run: |
+        echo "=== Pods ==="
+        kubectl get pods -n ${{ env.NAMESPACE }}
+        echo ""
+        echo "=== Services ==="
+        kubectl get svc -n ${{ env.NAMESPACE }}
+        echo ""
+        echo "=== Ingress ==="
+        kubectl get ingress -n ${{ env.NAMESPACE }}
+        
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "Deployment failed! Check the logs above for details."
+        kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/component=backend --tail=50
+        kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/component=frontend --tail=50

@@ -1,0 +1,173 @@
+# Default values for pickstream
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  projectId: "your-gcp-project-id"
+  region: "us-central1"
+  
+# Namespace
+namespace: pickstream
+
+# Image registry
+imageRegistry: us-central1-docker.pkg.dev
+imageRepository: your-gcp-project-id/pickstream
+
+# Backend service configuration
+backend:
+  name: pickstream-backend
+  replicaCount: 3
+  
+  image:
+    repository: pickstream-backend
+    tag: latest
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  env:
+    - name: SPRING_PROFILES_ACTIVE
+      value: "production"
+    - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+      value: "health,info,metrics,prometheus"
+    - name: LOGGING_LEVEL_ROOT
+      value: "INFO"
+    - name: LOGGING_LEVEL_COM_PICKSTREAM
+      value: "INFO"
+
+# Frontend service configuration
+frontend:
+  name: pickstream-frontend
+  replicaCount: 2
+  
+  image:
+    repository: pickstream-frontend
+    tag: latest
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+  
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  
+  env:
+    - name: BACKEND_SERVICE_HOST
+      value: "pickstream-backend"
+    - name: BACKEND_SERVICE_PORT
+      value: "8080"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: pickstream.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: pickstream-frontend
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: pickstream-backend
+          port: 8080
+  tls:
+    - secretName: pickstream-tls
+      hosts:
+        - pickstream.example.com
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: "pickstream-sa@your-gcp-project-id.iam.gserviceaccount.com"
+  name: "pickstream"
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Network Policy
+networkPolicy:
+  enabled: true
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    path: /actuator/prometheus

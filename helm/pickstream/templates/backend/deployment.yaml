@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.backend.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "pickstream.backend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pickstream.backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+      labels:
+        {{- include "pickstream.backend.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "pickstream.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: backend
+        image: {{ include "pickstream.backend.image" . }}
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.backend.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range .Values.backend.env }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+        livenessProbe:
+          {{- toYaml .Values.backend.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.backend.readinessProbe | nindent 10 }}
+        resources:
+          {{- toYaml .Values.backend.resources | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
