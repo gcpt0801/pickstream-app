@@ -162,7 +162,7 @@ podDisruptionBudget:
 
 # Network Policy
 networkPolicy:
-  enabled: true
+  enabled: false
 
 # Monitoring
 monitoring:

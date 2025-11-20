@@ -2,7 +2,7 @@
 
 [![CI/CD Pipeline](https://github.com/gcpt0801/pickstream-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/gcpt0801/pickstream-app/actions/workflows/ci-cd.yml)
 
-PickStream is a microservices-based random name selection application deployed on Google Kubernetes Engine (GKE). This repository contains the application code, Helm charts, and unified CI/CD pipeline for automated deployments.
+PickStream is a microservices-based random name selection application deployed on Google Kubernetes Engine (GKE). This repository contains the application code, Helm charts, and unified CI/CD pipeline for automated deployments with LoadBalancer service.
 
 ## 🏗️ Architecture
 

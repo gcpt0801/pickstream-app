@@ -37,7 +37,7 @@ frontend:
     maxReplicas: 2
 
 ingress:
-  enabled: true
+  enabled: false
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
   hosts:
