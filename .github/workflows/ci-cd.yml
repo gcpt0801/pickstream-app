@@ -82,11 +82,6 @@ jobs:
       with:
         version: '3.13.0'
         
-    - name: Setup firewall rules
-      run: |
-        chmod +x ./scripts/setup-firewall.sh
-        ./scripts/setup-firewall.sh || echo "⚠️  Firewall setup skipped (may need manual configuration)"
-        
     - name: Create namespace if not exists
       run: |
         if kubectl get namespace ${{ env.NAMESPACE }} > /dev/null 2>&1; then
