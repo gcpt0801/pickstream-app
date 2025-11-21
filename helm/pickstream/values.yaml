@@ -145,8 +145,8 @@ networkPolicy:
 
 # Monitoring
 monitoring:
-  enabled: true
+  enabled: false
   serviceMonitor:
-    enabled: true
+    enabled: false
     interval: 30s
     path: /actuator/prometheus
