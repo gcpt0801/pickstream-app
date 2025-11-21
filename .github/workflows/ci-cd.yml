@@ -97,10 +97,6 @@ jobs:
           kubectl annotate namespace ${{ env.NAMESPACE }} meta.helm.sh/release-namespace=${{ env.NAMESPACE }}
         fi
         
-    - name: Clean up any existing NetworkPolicies
-      run: |
-        kubectl delete networkpolicy --all -n ${{ env.NAMESPACE }} || echo "No network policies to delete"
-        
     - name: Deploy with Helm
       run: |
         helm upgrade --install ${{ env.HELM_RELEASE }} ./helm/pickstream \
