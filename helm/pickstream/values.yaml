@@ -16,7 +16,7 @@ imageRepository: gcp-terraform-demo-474514/pickstream
 # Backend service configuration
 backend:
   name: pickstream-backend
-  replicaCount: 3
+  replicaCount: 1
   
   image:
     repository: pickstream-backend
@@ -38,8 +38,8 @@ backend:
   
   autoscaling:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 10
+    minReplicas: 1
+    maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   
@@ -74,7 +74,7 @@ backend:
 # Frontend service configuration
 frontend:
   name: pickstream-frontend
-  replicaCount: 2
+  replicaCount: 1
   
   image:
     repository: pickstream-frontend
@@ -96,8 +96,8 @@ frontend:
   
   autoscaling:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 5
+    minReplicas: 1
+    maxReplicas: 3
     targetCPUUtilizationPercentage: 75
   
   livenessProbe:
