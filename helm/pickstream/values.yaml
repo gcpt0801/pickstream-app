@@ -126,27 +126,7 @@ frontend:
 
 # Ingress configuration
 ingress:
-  enabled: true
-  className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-  hosts:
-    - host: pickstream.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-          service: pickstream-frontend
-          port: 80
-        - path: /api
-          pathType: Prefix
-          service: pickstream-backend
-          port: 8080
-  tls:
-    - secretName: pickstream-tls
-      hosts:
-        - pickstream.example.com
+  enabled: false
 
 # Service Account
 serviceAccount:
@@ -157,8 +137,7 @@ serviceAccount:
 
 # Pod Disruption Budget
 podDisruptionBudget:
-  enabled: true
-  minAvailable: 1
+  enabled: false
 
 # Network Policy
 networkPolicy:
