@@ -106,7 +106,6 @@ jobs:
         helm upgrade --install ${{ env.HELM_RELEASE }} ./helm/pickstream \
           --namespace ${{ env.NAMESPACE }} \
           --values ./helm/pickstream/values.yaml \
-          --values ./helm/pickstream/values-dev.yaml \
           --set global.projectId=${{ secrets.GCP_PROJECT_ID }} \
           --set backend.image.tag=${{ github.sha }} \
           --set frontend.image.tag=${{ github.sha }} \
