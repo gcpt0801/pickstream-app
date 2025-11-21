@@ -1,253 +1,193 @@
-# PickStream Application
+# Pickstream Application
 
-[![CI/CD Pipeline](https://github.com/gcpt0801/pickstream-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/gcpt0801/pickstream-app/actions/workflows/ci-cd.yml)
+A simple microservices application that demonstrates deployment to Google Kubernetes Engine (GKE) using Helm and automated CI/CD.
 
-PickStream is a microservices-based random name selection application deployed on Google Kubernetes Engine (GKE). This repository contains the application code, Helm charts, and unified CI/CD pipeline for automated deployments with LoadBalancer service.
+## What Does This Application Do?
 
-## 🏗️ Architecture
+Pickstream displays random names from a list. It's designed to teach:
+- Microservices architecture
+- Containerization with Docker
+- Kubernetes deployment
+- Automated CI/CD pipelines
+
+## Architecture
 
 ```
-┌─────────────────┐
-│   Ingress       │
-│  (nginx)        │
-└────────┬────────┘
-         │
-    ┌────┴─────┐
-    │          │
-┌───▼──────┐ ┌─▼──────────┐
-│ Frontend │ │  Backend   │
-│ (Nginx)  │ │ (Spring    │
-│          │ │  Boot)     │
-└──────────┘ └────────────┘
+Browser  ──────▶  Frontend (Nginx)  ──────▶  Backend (Spring Boot)
+                       │
+                       ▼
+                 Static UI Files
+                 
+Backend API:
+- GET /api/random-name  - Get a random name
+- GET /api/names        - List all names  
+- GET /api/health       - Health check
 ```
 
-### Components
+## Project Structure
 
-- **Backend**: Spring Boot 3.2.0 REST API (Java 17)
-  - Random name selection service
-  - In-memory name storage
-  - Prometheus metrics
-  - Health checks
+```
+pickstream-app/
+├── .github/workflows/     # CI/CD pipeline
+│   └── ci-cd.yml         # Automated build and deploy
+├── services/             # Application code
+│   ├── backend/         # Spring Boot API
+│   └── frontend/        # Nginx + HTML/CSS/JS
+├── helm/                # Kubernetes deployment
+│   └── pickstream/      # Helm chart
+├── docs/                # Documentation
+└── docker-compose.yml   # Local development
+```
 
-- **Frontend**: Nginx-served static web application
-  - Modern UI with gradient design
-  - Real-time API communication
-  - Responsive layout
+## Quick Start
 
-- **Infrastructure**: Kubernetes resources managed via Helm
-  - Horizontal Pod Autoscaling
-  - Network Policies
-  - Service Mesh ready
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Java 17+ (for local backend development)
-- Maven 3.9+ (for backend builds)
-- kubectl (for Kubernetes deployments)
-- Helm 3.13+ (for chart deployments)
-- gcloud CLI (for GKE access)
-
-### Automated Setup (Recommended)
-
-The CI/CD pipeline automatically handles:
-- ✅ Building and pushing Docker images
-- ✅ Creating firewall rules for LoadBalancer access
-- ✅ Setting up Kubernetes namespace with proper labels
-- ✅ Cleaning up problematic NetworkPolicies
-- ✅ Deploying with Helm
-- ✅ Running smoke tests
-
-Just push to `main` branch and the deployment happens automatically!
-
-### Local Development
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/pickstream-app.git
-   cd pickstream-app
-   ```
-
-2. **Start services with Docker Compose**
-   ```bash
-   ./scripts/local-dev.sh start
-   ```
-
-3. **Access the application**
-   - Frontend: http://localhost:8081
-   - Backend API: http://localhost:8080
-   - Health Check: http://localhost:8080/actuator/health
-   - Metrics: http://localhost:8080/actuator/prometheus
-
-4. **View logs**
-   ```bash
-   ./scripts/local-dev.sh logs
-   ```
-
-5. **Stop services**
-   ```bash
-   ./scripts/local-dev.sh stop
-   ```
-
-## 📦 Deployment
-
-### GKE Deployment with Helm
-
-1. **Configure kubectl**
-   ```bash
-   gcloud container clusters get-credentials pickstream-cluster \
-     --zone=us-central1-a \
-     --project=your-gcp-project-id
-   ```
-
-2. **Deploy to development**
-   ```bash
-   helm upgrade --install pickstream ./helm/pickstream \
-     --namespace pickstream \
-     --create-namespace \
-     --values ./helm/pickstream/values.yaml \
-     --values ./helm/pickstream/values-dev.yaml \
-     --set global.projectId=your-gcp-project-id
-   ```
-
-3. **Verify deployment**
-   ```bash
-   kubectl get pods -n pickstream
-   kubectl get svc -n pickstream
-   kubectl get ingress -n pickstream
-   ```
-
-### Using GitHub Actions
-
-Deployments are automated via GitHub Actions:
-
-- **Backend CI**: Triggered on push to `services/backend/**`
-- **Frontend CI**: Triggered on push to `services/frontend/**`
-- **Deploy Dev**: Automatic on merge to `main`
-- **Deploy Staging**: Manual trigger with image tag selection
-- **Deploy Prod**: Manual trigger with confirmation required
-
-## 🛠️ Development
-
-### Backend Development
+### Run Locally
 
 ```bash
-cd services/backend
+# Start both services
+docker-compose up
 
-# Run tests
-./mvnw test
-
-# Run locally
-./mvnw spring-boot:run
-
-# Build Docker image
-docker build -t pickstream-backend .
+# Access at http://localhost:8081
 ```
 
-### Frontend Development
+Backend runs on port 8080, frontend on 8081.
 
+### Deploy to GKE (Automatic)
+
+**Just push to main branch!** The CI/CD pipeline automatically:
+1. Builds Docker images
+2. Pushes to Artifact Registry
+3. Deploys to your GKE cluster
+
+**Required GitHub Secrets:**
+- `WIF_PROVIDER` - Workload Identity Federation provider
+- `WIF_SERVICE_ACCOUNT` - GCP service account
+- `GCP_PROJECT_ID` - Your GCP project
+
+## How It Works
+
+### CI/CD Pipeline
+
+When you push to main:
+1. **Authenticate** - Uses Workload Identity (no keys needed!)
+2. **Build** - Creates Docker images for backend and frontend
+3. **Push** - Uploads images to Google Artifact Registry
+4. **Deploy** - Uses Helm to deploy to GKE
+5. **Verify** - Checks that everything is running
+
+### Kubernetes Setup
+
+The Helm chart creates:
+- **Namespace:** `pickstream` (isolates resources)
+- **Backend Deployment:** 2 pods with Spring Boot
+- **Frontend Deployment:** 1 pod with Nginx
+- **Backend Service:** Internal (ClusterIP)
+- **Frontend Service:** External (LoadBalancer)
+
+### Accessing Your Application
+
+After deployment:
 ```bash
-cd services/frontend
+# Get the external IP
+kubectl get svc pickstream-frontend -n pickstream
 
-# Test locally with Docker
-docker build -t pickstream-frontend .
-docker run -p 8080:80 pickstream-frontend
+# Look for EXTERNAL-IP and open in browser
 ```
 
-## 📚 Documentation
+## Making Changes
 
-- [API Documentation](docs/API.md) - REST API endpoints and examples
-- [Deployment Guide](docs/DEPLOYMENT.md) - Detailed deployment instructions
-- [Local Development](docs/LOCAL_DEVELOPMENT.md) - Local setup guide
+### Update the UI
+1. Edit `services/frontend/public/index.html` or `services/frontend/public/js/app.js`
+2. Push to main
+3. CI/CD builds and deploys automatically
 
-## 🔧 Configuration
+### Update the API  
+1. Edit Java code in `services/backend/src/main/java/com/pickstream/`
+2. Push to main
+3. CI/CD builds and deploys automatically
 
-### Environment Variables
+### Change Deployment Settings
+1. Edit `helm/pickstream/values.yaml` or `values-dev.yaml`
+2. Push to main
+3. CI/CD applies changes
 
-**Backend**:
-- `SPRING_PROFILES_ACTIVE`: Active Spring profile (development/production)
-- `LOGGING_LEVEL_COM_PICKSTREAM`: Log level for application
+## Monitoring
 
-**Frontend**:
-- `BACKEND_SERVICE_HOST`: Backend service hostname
-- `BACKEND_SERVICE_PORT`: Backend service port
-
-### GitHub Secrets Required
-
-Configure these secrets in your GitHub repository:
-
-- `GCP_PROJECT_ID`: Google Cloud project ID
-- `WIF_PROVIDER`: Workload Identity Federation provider
-- `WIF_SERVICE_ACCOUNT`: Service account for WIF
-
-## 🧪 Testing
-
-### Backend Tests
-
+### View Running Pods
 ```bash
-cd services/backend
-./mvnw test
-./mvnw verify  # Integration tests
+kubectl get pods -n pickstream
 ```
 
-### Smoke Tests
-
+### Check Logs
 ```bash
-# Test backend health
-curl http://localhost:8080/api/health
+# Backend
+kubectl logs -n pickstream -l app.kubernetes.io/component=backend
 
-# Get random name
-curl http://localhost:8080/api/random-name
-
-# Add a name
-curl -X POST "http://localhost:8080/api/random-name?name=John"
-
-# List all names
-curl http://localhost:8080/api/names
-
-# Delete a name
-curl -X DELETE "http://localhost:8080/api/names/John"
+# Frontend
+kubectl logs -n pickstream -l app.kubernetes.io/component=frontend
 ```
 
-## 📊 Monitoring
-
-### Prometheus Metrics
-
-Backend exposes Prometheus metrics at `/actuator/prometheus`:
-
+### Test the Backend Directly
 ```bash
-# Port forward to access metrics locally
+# Port forward
 kubectl port-forward -n pickstream svc/pickstream-backend 8080:8080
-curl http://localhost:8080/actuator/prometheus
+
+# Test API
+curl http://localhost:8080/api/random-name
 ```
 
-### Health Checks
+## Common Issues
 
-- Backend: `/actuator/health`
-- Frontend: `/health`
+**Pods not starting?**
+- Check image pull permissions
+- View pod details: `kubectl describe pod <pod-name> -n pickstream`
 
-## 🤝 Contributing
+**502 Bad Gateway?**
+- Backend might not be ready yet
+- Check backend logs
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**Can't access application?**
+- Verify LoadBalancer has external IP: `kubectl get svc -n pickstream`
+- Check firewall rules allow HTTP traffic
 
-## 📄 License
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for detailed solutions.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## Technology Stack
 
-## 🔗 Related Repositories
+**Backend:**
+- Spring Boot 3.2.0
+- Java 17
+- Maven
 
-- [pickstream-infrastructure](https://github.com/yourusername/pickstream-infrastructure) - Terraform for GKE cluster provisioning
+**Frontend:**
+- Nginx Alpine
+- HTML, CSS, JavaScript
 
-## 📞 Support
+**Infrastructure:**
+- Google Kubernetes Engine (GKE)
+- Google Artifact Registry
+- Helm 3
+- GitHub Actions
+- Workload Identity Federation
 
-For issues and questions, please open an issue on GitHub.
+## Learn More
+
+- **Services Guide:** [services/README.md](services/README.md)
+- **Helm Charts:** [helm/README.md](helm/README.md)
+- **Troubleshooting:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- **Infrastructure:** [docs/INFRASTRUCTURE_AUTOMATION.md](docs/INFRASTRUCTURE_AUTOMATION.md)
+
+## Prerequisites
+
+**For Local Development:**
+- Docker and Docker Compose
+
+**For GKE Deployment:**
+- GCP project with GKE cluster
+- Artifact Registry repository  
+- Workload Identity Federation configured
+- GitHub repository secrets configured
 
 ---
 
-Built with ❤️ using Spring Boot, Docker, Kubernetes, and Helm
+Built for learning microservices, Kubernetes, and CI/CD! 🚀
